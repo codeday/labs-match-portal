@@ -2,21 +2,21 @@ import { DefaultSeo } from 'next-seo';
 import Box from '@codeday/topo/Atom/Box';
 import Header, { SiteLogo } from '@codeday/topo/Organism/Header';
 import Footer from '@codeday/topo/Organism/Footer';
-import { CodeDay } from '@codeday/topo/Atom/Logo';
+import { Labs } from '@codeday/topo/Atom/Logo';
 
 // TODO: Set production domain
-const DOMAIN = 'https://labs-match-portal.codeday.org';
+const DOMAIN = 'https://labs-match.codeday.org';
 
 export default ({ children, title, darkHeader, slug }) => (
   <>
     <DefaultSeo
       title={title}
-      description="labs-match-portal description"
+      description="Select your preferences for CodeLabs projects."
       canonical={`${DOMAIN}${slug}`}
       openGraph={{
         type: 'website',
         locale: 'en_US',
-        site_name: 'labs-match-portal',
+        site_name: 'CodeLabs',
         url: `${DOMAIN}${slug}`,
       }}
       twitter={{
@@ -29,7 +29,7 @@ export default ({ children, title, darkHeader, slug }) => (
       <Header darkBackground={darkHeader} gradAmount={darkHeader && 'lg'} underscore position="relative" zIndex={1000}>
         <SiteLogo>
           <a href="/">
-            <CodeDay withText />
+            <Labs withText />
           </a>
         </SiteLogo>
       </Header>

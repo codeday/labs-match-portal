@@ -1,55 +1,20 @@
+import React, { useReducer, useState } from 'react';
 import getConfig from 'next/config';
-import Text, { Heading } from '@codeday/topo/Atom/Text';
-import Content from '@codeday/topo/Molecule/Content';
-import Box from '@codeday/topo/Atom/Box';
-import Page from '../components/page';
 import { sign } from 'jsonwebtoken';
 import axios from 'axios';
 import Airtable from 'airtable';
+import Text, { Heading, Link } from '@codeday/topo/Atom/Text';
+import Content from '@codeday/topo/Molecule/Content';
+import Box, { Grid } from '@codeday/topo/Atom/Box';
+import Button from '@codeday/topo/Atom/Button';
+import Page from '../components/page';
+import Explain from '../components/explain';
+import { MatchesList } from '../components/matches';
+import Sorter from '../components/sorter';
 
 const { serverRuntimeConfig } = getConfig();
-
-const nl2br = (str) => str && str.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br />');
-const colors = {
-  'Web Dev': 'purple',
-  'Mobile': 'blue',
-  'Services': 'green',
-  'Frontend': 'green',
-  'Backend': 'yellow',
-  'Electronics': 'orange',
-  'Research': 'red',
-  'Sciences': 'red',
-  'Health': 'red',
-  'AI': 'gray',
-  'Robotics': 'purple',
-  'Cryptography': 'blue',
-  'Games': 'green',
-  'Data': 'green',
-  'OS': 'yellow',
-  'HCI/UX': 'orange',
-  'Services': 'purple',
-}
-const drawTag = (tag, interests) => (
-  <Box
-    bg={`${colors[tag]}.100`}
-    color={`${colors[tag]}.800`}
-    borderRadius={4}
-    d="inline"
-    p={2}
-    mr={2}
-    borderColor={`${colors[tag]}.${interests && interests.includes(tag) ? 800 : 100}`}
-    borderWidth={2}
-    >
-      {tag}
-    </Box>
-);
-const sortTags = (interests) => {
-  return (a, b) => {
-    if (interests.includes(a) && !interests.includes(b)) return -1;
-    if (interests.includes(b) && !interests.includes(a)) return 1;
-    return 0;
-  }
-}
+const minProjectsToSubmit = 5;
+const displayProjectsCount = 15;
 
 export const getServerSideProps = async ({ query: { debug }, res, params: { id } }) => {
 
@@ -85,80 +50,123 @@ export const getServerSideProps = async ({ query: { debug }, res, params: { id }
     console.error(err);
   }
 
+  console.log(matches);
+
   return {
     props: {
-      matches,
+      matches: matches.slice(0, displayProjectsCount),
       record,
       id,
       debug: debug ? true : false,
+      hasSubmitted: false,
     }
   }
 }
 
-export default function Home({ id, matches, record, debug }) {
+export default function Home({ id, matches, record, debug, hasSubmitted }) {
+  const [picks, updatePicks] = useReducer((picks, { action, data }) => {
+    if (action === 'add') {
+      return [...picks, data];
+    }
+    if (action === 'delete') {
+      return picks.filter((pick) => pick.project.id !== data.project.id);
+    }
+  }, []);
+  const [ranking, setRanking] = useState([]);
+  const [isWarned, setIsWarned] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(hasSubmitted || false);
+
+  if (!matches || matches.length === 0) {
+    return (
+      <Page slug={`/${id}`} title={`Project Preferences`}>
+        <Content>
+          <Heading as="h2" fontSize="5xl" textAlign="center">Error</Heading>
+          <Text>
+            Sorry, something went wrong and we couldn't load your matches. Try refreshing in a couple minutes and if
+            you're still getting this error, contact <Link href="mailto:labs@codeday.org">labs@codeday.org</Link>
+          </Text>
+        </Content>
+      </Page>
+    )
+  }
+
+  if (isSubmitted) {
+    return (
+      <Page slug={`/${id}`} title={`Project Preferences`}>
+        <Content>
+          <Heading as="h2" fontSize="5xl" textAlign="center">Your preferences were submitted.</Heading>
+          <Text>Keep an eye out for your mentor introduction a few days before CodeLabs starts.</Text>
+        </Content>
+      </Page>
+    );
+  }
+
 	return (
 		<Page slug={`/${id}`} title={`Project Preferences`}>
 			<Content>
-				<Heading as="h2" fontSize="5xl" textAlign="center">Project Preferences{record && ` for ${record.Name}`}</Heading>
-        <Box borderColor="green.500" borderWidth={2} borderRadius={2} padding={4} mb={8} color="green.800">
-          <Heading as="h3" fontSize="xl" mb={4}>What we're using to make these recommendations:</Heading>
-          <Text mb={0}><Text as="span" bold>How much time you committed:</Text> {record['Time Commitment']} per week</Text>
-          <Text mb={0}><Text as="span" bold>Your track:</Text> {record['Track']}</Text>
-          <Text mb={0}><Text as="span" bold>Did you grow up in a rural area?</Text> {record['Rural'] ? 'Yes' : 'No' }</Text>
-          <Text mb={0}><Text as="span" bold>Are you from a group underrepresented in technology:</Text> {record['Underrepresented'] ? 'Yes' : 'No'}</Text>
-          <Text mb={0}><Text as="span" bold>Your timezone:</Text> GMT{record['Timezone'] >= 0 && "+"}{record['Timezone']}</Text>
-          <Text mb={0}><Text as="span" bold>Do you need an extended internship?</Text> {record['Extended Internship'] ? 'Yes' : 'No' }</Text>
-          <Text mb={0}><Text as="span" bold>Companies you're interested in:</Text> {record['Interested Companies']}</Text>
-          <Text mb={0}><Text as="span" bold>Fields you're interested in:</Text> {record['Interests'].map((t) => drawTag(t, record['Interests']))}</Text>
+				<Heading as="h2" fontSize="5xl" textAlign="center" mb={8}>
+          Project Preferences{record && ` for ${record.Name}`}
+        </Heading>
+        <Box p={4} mb={8} display={{ base: 'block', md: 'none' }} bg="red.50" borderColor="red.500" borderWidth={2} color="red.900">
+          <Text fontSize="xl" bold>We recommend viewing this site on a device with a larger screen.</Text>
+          <Text>There's a lot of information on this page, and it's hard to see it all on a phone.</Text>
         </Box>
-        {matches.length == 0 && (
-          <Text>Sorry, something went wrong and we couldn't load your matches. If this error persists contact support.</Text>
-        )}
-        {
-          matches.filter((match) => match.score !== 0).map((match) => (
-            <Box mb={8} borderColor="gray.200" borderWidth={2} borderRadius={2}>
-                <Heading p={4} as="h3" fontSize="xl" mb={2} backgroundColor="gray.100" borderBottomColor="gray.200" borderBottomWidth={2} mb={4}>
-                  {match.project.name}, {match.project.company}{' '}
-                  ({match.project.track}-track project{match.project.okExtended && ' for extended internships'})
-                </Heading>
-                <Box mb={8} ml={4} mr={4}>
-                  {match.project.proj_tags && match.project.proj_tags.sort(sortTags(record['Interests'])).map((t) => drawTag(t, record['Interests']))}
-                </Box>
-                <Box mb={8} mr={4} ml={4}>
-                  <Heading as="h4" fontSize="md" mb={2}>About the project</Heading>
-                  <Text pl={2} ml={2} borderLeftColor="gray.100" borderLeftWidth={2}>
-                    <div dangerouslySetInnerHTML={{ __html: nl2br(match.project.proj_description) }} />
-                  </Text>
-                  {match.project.preferToolExistingKnowledge && (
-                    <Text backgroundColor="red.50" bold color="red.800">{match.project.name} prefers students with existing knowledge of this tech stack.</Text>
-                  )}
-                </Box>
-                <Box mb={8} mr={4} ml={4}>
-                  <Heading as="h4" fontSize="md" mb={2}>About {match.project.name}</Heading>
-                  <Text>{nl2br(match.project.bio)}</Text>
-                </Box>
-                { debug && (
-                  <Box pl={8} pr={4} borderTopColor="gray.100" borderTopWidth={2}>
-                    <Heading as="h4" fontSize="md" mb={2} mt={4}>Debug</Heading>
-                    <Text>
-                      <Box d="inline" bg={match.project.preferStudentUnderRep > 0 ? 'red.300' : 'gray.100'} p={2} mr={2}>
-                        prefUrm {match.project.preferStudentUnderRep}
-                      </Box>
-                      <Box d="inline" bg={match.project.okTimezoneDifference ? 'green.300' : 'gray.100'} p={2} mr={2}>
-                        okTzDiff {match.project.okTimezoneDifference ? 'Yes' : 'No'}
-                      </Box>
-                      <Box d="inline" bg={{'-7': 'blue.50', '-6': 'blue.100', '-5': 'blue.200', '-4': 'blue.300'}[match.project.timezone] || 'gray.50'} p={2} mr={2}>
-                        tz: {match.project.timezone},
-                      </Box>
-                      <Box d="inline" bg={`purple.${Math.max(9, Math.ceil(match.score) * 100)}`} color={match.score >= 5 ? 'white' : 'black'} p={2} mr={2}>
-                        score: {match.score}
-                      </Box>
-                    </Text>
-                  </Box>
-                )}
-            </Box>
-          ))
-        }
+        <Explain record={record} />
+        <Grid templateColumns={{ base: '1fr', md: '2fr 4fr' }}>
+          <Box mr={4}>
+            <Heading as="h3" fontSize="xl">Rank Your Favorite Projects</Heading>
+            <Text>
+              Select at least {minProjectsToSubmit} projects, then drag-and-drop to reorder your final preferences. The
+              projects on the top of your list are the ones you're most likely to get.
+            </Text>
+            <Text bold>Your submission is final.</Text>
+            <Button
+              disabled={ranking.length < minProjectsToSubmit}
+              variantColor="green"
+              variant={isWarned ? 'solid' : 'outline'}
+              mb={4}
+              onClick={async () => {
+                if (!isWarned) {
+                  setIsWarned(true);
+                  return;
+                }
+                setIsSubmitting(true);
+                const result = await (await fetch('/api/preferences', {
+                  method: 'POST',
+                  headers: { 'Content-type': 'application/json' },
+                  body: JSON.stringify({
+                    id,
+                    votes: Object.keys(ranking)
+                      .map((index) => ({ rank: Number.parseInt(index)+1, id: ranking[index].project.id }))
+                    }),
+                })).json();
+                setIsSubmitting(false);
+                if (result && result.ok) {
+                  setIsSubmitted(true);
+                }
+              }}
+            >
+              {(() => {
+                if (isSubmitting) return "Submitting...";
+                if (isWarned) return "Are you sure? Choices are final!";
+                if (ranking.length < minProjectsToSubmit) return `Pick at least ${minProjectsToSubmit}`;
+                return "Submit";
+              })()}
+            </Button>
+            <Sorter matches={picks} onUpdate={(r) => { setRanking(r); setIsWarned(false); }} />
+          </Box>
+          <Box>
+            <MatchesList
+              record={record}
+              debug={debug}
+              matches={matches}
+              selected={picks}
+              onSelect={(match) => { updatePicks({ action: 'add', data: match}); setIsWarned(false); }}
+              onDeselect={(match) => { updatePicks({ action: 'delete', data: match }); setIsWarned(false); }}
+            />
+          </Box>
+        </Grid>
 			</Content>
 		</Page>
 	)
