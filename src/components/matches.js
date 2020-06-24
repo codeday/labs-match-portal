@@ -5,7 +5,10 @@ import truncate from 'truncate';
 import { TagList } from './tag'
 import { ordinal } from '../utils';
 
-const nl2br = (str) => str && str.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br />');
+const nl2br = (str) => str && str
+  .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/\n/g, '<br />')
+  .replace(/(https?:\/\/[^\s]+)/g, (url) => `<a href="${url}" style="text-decoration: underline" target="_blank">${url}</a>`);
 
 export const Match = ({ match, record, debug, onSelect, onDeselect, isSelected }) => (
   <Box mb={8} borderColor="gray.200" borderWidth={2} borderRadius={2}>
@@ -33,7 +36,7 @@ export const Match = ({ match, record, debug, onSelect, onDeselect, isSelected }
       {/* Mentor Info */}
       <Box mb={8} mr={4} ml={4}>
         <Heading as="h4" fontSize="md" mb={2}>About {match.project.name}</Heading>
-        <Text>{nl2br(match.project.bio)}</Text>
+        <Text><div dangerouslySetInnerHTML={{ __html: nl2br(match.project.bio) }} /></Text>
       </Box>
 
       <Box mb={8} mr={4} ml={4}>

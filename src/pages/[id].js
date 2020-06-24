@@ -29,6 +29,18 @@ export const getServerSideProps = async ({ query: { debug }, res, params: { id }
     return { props: { matches: [] }};
   }
 
+  try {
+    const fetchVotesJwt = sign({ student_id: id }, serverRuntimeConfig.matchSecret);
+    const fetchVotesUrl = `${serverRuntimeConfig.matchUrl}/votes/${fetchVotesJwt}`;
+    const priorVotes = (await axios({ method: 'get', url: fetchVotesUrl, responseType: 'json'})).data;
+    if (priorVotes.length > 0) {
+      return { props: { priorVotes: priorVotes.sort((a, b) => a.choice - b.choice), record }}
+    }
+  } catch (err) {
+    console.error(err);
+    return { props: { matches: [] } };
+  }
+
   const matchRecord = {
     id,
     name: record.Name,
@@ -50,8 +62,6 @@ export const getServerSideProps = async ({ query: { debug }, res, params: { id }
     console.error(err);
   }
 
-  console.log(matches);
-
   return {
     props: {
       matches: matches.slice(0, displayProjectsCount),
@@ -63,7 +73,7 @@ export const getServerSideProps = async ({ query: { debug }, res, params: { id }
   }
 }
 
-export default function Home({ id, matches, record, debug, hasSubmitted }) {
+export default function Home({ id, matches, record, debug, priorVotes }) {
   const [picks, updatePicks] = useReducer((picks, { action, data }) => {
     if (action === 'add') {
       return [...picks, data];
@@ -75,7 +85,33 @@ export default function Home({ id, matches, record, debug, hasSubmitted }) {
   const [ranking, setRanking] = useState([]);
   const [isWarned, setIsWarned] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(hasSubmitted || false);
+  const [isSubmitted, setIsSubmitted] = useState(priorVotes && priorVotes.length > 0 || false);
+
+  if (priorVotes && priorVotes.length > 0) {
+	return (
+		<Page slug={`/${id}`} title={`Project Preferences`}>
+			<Content>
+				<Heading as="h2" fontSize="5xl" textAlign="center" mb={8}>
+          Project Preferences{record && ` for ${record.Name}`}
+        </Heading>
+        <Box bg="yellow.50" color="yellow.900" borderColor="yellow.100" borderWidth={2} p={4} mb={8}>
+          <Text bold fontSize="lg">You already submitted your preferences.</Text>
+          <Text>Below you can see your submitted choices, in order of most to least preferable.</Text>
+        </Box>
+        <Box>
+          <MatchesList
+            record={record}
+            debug={debug}
+            matches={priorVotes}
+            selected={picks}
+            onSelect={(match) => { updatePicks({ action: 'add', data: match}); setIsWarned(false); }}
+            onDeselect={(match) => { updatePicks({ action: 'delete', data: match }); setIsWarned(false); }}
+          />
+        </Box>
+			</Content>
+		</Page>
+	)
+  }
 
   if (!matches || matches.length === 0) {
     return (
