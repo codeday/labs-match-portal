@@ -200,6 +200,7 @@ export default function Home({ id, matches, record, debug, priorVotes }) {
               selected={picks}
               onSelect={(match) => { updatePicks({ action: 'add', data: match}); setIsWarned(false); }}
               onDeselect={(match) => { updatePicks({ action: 'delete', data: match }); setIsWarned(false); }}
+              allowSelect
             />
           </Box>
         </Grid>

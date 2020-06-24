@@ -10,7 +10,7 @@ const nl2br = (str) => str && str
   .replace(/\n/g, '<br />')
   .replace(/(https?:\/\/[^\s]+)/g, (url) => `<a href="${url}" style="text-decoration: underline" target="_blank">${url}</a>`);
 
-export const Match = ({ match, record, debug, onSelect, onDeselect, isSelected }) => (
+export const Match = ({ match, record, debug, onSelect, onDeselect, isSelected, allowSelect }) => (
   <Box mb={8} borderColor="gray.200" borderWidth={2} borderRadius={2}>
       <Heading p={4} as="h3" fontSize="xl" mb={2} backgroundColor="gray.100" borderBottomColor="gray.200" borderBottomWidth={2} mb={4}>
         {match.project.name}, {match.project.company}{' '}
@@ -39,15 +39,18 @@ export const Match = ({ match, record, debug, onSelect, onDeselect, isSelected }
         <Text><div dangerouslySetInnerHTML={{ __html: nl2br(match.project.bio) }} /></Text>
       </Box>
 
-      <Box mb={8} mr={4} ml={4}>
-        <Button
-          onClick={() => isSelected ? onDeselect(match) : onSelect(match)}
-          variantColor={isSelected ? 'red' : 'green'}
-          variant={isSelected ? 'outline' : 'solid'}
-        >
-          {isSelected ? 'Undo Selection' : 'Add to My Ranking'}
-        </Button>
-      </Box>
+      {/* Select button */}
+      {allowSelect && (
+        <Box mb={8} mr={4} ml={4}>
+          <Button
+            onClick={() => isSelected ? onDeselect(match) : onSelect(match)}
+            variantColor={isSelected ? 'red' : 'green'}
+            variant={isSelected ? 'outline' : 'solid'}
+          >
+            {isSelected ? 'Undo Selection' : 'Add to My Ranking'}
+          </Button>
+        </Box>
+      )}
 
       {/* Debug Info */}
       { debug && (
@@ -79,7 +82,7 @@ export const MiniMatch = ({ match, index }) => (
   </Box>
 );
 
-export const MatchesList = ({ matches, record, debug, selected, onSelect, onDeselect }) => matches
+export const MatchesList = ({ matches, record, debug, selected, onSelect, onDeselect, allowSelect }) => matches
   .filter((match) => match.score !== 0)
   .map((match) => (
     <Match
@@ -89,5 +92,6 @@ export const MatchesList = ({ matches, record, debug, selected, onSelect, onDese
       isSelected={selected.map((e) => e.project.id).includes(match.project.id)}
       onSelect={onSelect}
       onDeselect={onDeselect}
+      allowSelect={allowSelect}
     />
   ));
