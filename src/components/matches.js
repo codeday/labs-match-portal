@@ -8,18 +8,27 @@ import { ordinal } from '../utils';
 const nl2br = (str) => str && str
   .replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/\n/g, '<br />')
-  .replace(/(https?:\/\/[^\s]+)/g, (url) => `<a href="${url}" style="text-decoration: underline" target="_blank">${url}</a>`);
+  .replace(/(https?:\/\/[^\s\(\)]+)/g, (url) => `<a href="${url}" style="text-decoration: underline" target="_blank">${url}</a>`);
 
 export const Match = ({ match, record, debug, onSelect, onDeselect, isSelected, allowSelect }) => (
   <Box mb={8} borderColor="gray.200" borderWidth={2} borderRadius={2}>
       <Heading p={4} as="h3" fontSize="xl" mb={2} backgroundColor="gray.100" borderBottomColor="gray.200" borderBottomWidth={2} mb={4}>
         {match.project.name}, {match.project.company}{' '}
-        ({match.project.track}-track project{match.project.okExtended && ' for extended internships'})
+        ({match.project.track}-track project)
       </Heading>
 
       {/* Tags */}
       <Box mb={8} ml={4} mr={4}>
         <TagList tags={match.project.proj_tags} featured={record['Interests']} />
+      </Box>
+
+      <Box mb={8} ml={4} mr={4}>
+        {record['Extended Internship'] && match.project.okExtended && (
+          <Text color="green.700" bold>This project is open to students needing extended internships.</Text>
+        )}
+        {match.project.preferToolExistingKnowledge && (
+          <Text backgroundColor="red.50" bold color="red.800">{match.project.name} prefers students with existing knowledge of this tech stack.</Text>
+        )}
       </Box>
 
       {/* Project Info */}
@@ -28,9 +37,6 @@ export const Match = ({ match, record, debug, onSelect, onDeselect, isSelected, 
         <Text pl={2} ml={2} borderLeftColor="gray.100" borderLeftWidth={2}>
           <div dangerouslySetInnerHTML={{ __html: nl2br(match.project.proj_description) }} />
         </Text>
-        {match.project.preferToolExistingKnowledge && (
-          <Text backgroundColor="red.50" bold color="red.800">{match.project.name} prefers students with existing knowledge of this tech stack.</Text>
-        )}
       </Box>
 
       {/* Mentor Info */}

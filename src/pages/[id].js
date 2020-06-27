@@ -29,6 +29,11 @@ export const getServerSideProps = async ({ query: { debug }, res, params: { id }
     return { props: { matches: [] }};
   }
 
+  if (record.Status !== 'Confirmed') {
+    res.statusCode = 404;
+    return { props: { matches: [], error: 'Matching is only open to students who have confirmed their participation.' }};
+  }
+
   try {
     const fetchVotesJwt = sign({ student_id: id }, serverRuntimeConfig.matchSecret);
     const fetchVotesUrl = `${serverRuntimeConfig.matchUrl}/votes/${fetchVotesJwt}`;
@@ -73,7 +78,7 @@ export const getServerSideProps = async ({ query: { debug }, res, params: { id }
   }
 }
 
-export default function Home({ id, matches, record, debug, priorVotes }) {
+export default function Home({ id, matches, record, debug, priorVotes, error }) {
   const [picks, updatePicks] = useReducer((picks, { action, data }) => {
     if (action === 'add') {
       return [...picks, data];
@@ -118,10 +123,12 @@ export default function Home({ id, matches, record, debug, priorVotes }) {
       <Page slug={`/${id}`} title={`Project Preferences`}>
         <Content>
           <Heading as="h2" fontSize="5xl" textAlign="center">Error</Heading>
-          <Text>
-            Sorry, something went wrong and we couldn't load your matches. Try refreshing in a couple minutes and if
-            you're still getting this error, contact <Link href="mailto:labs@codeday.org">labs@codeday.org</Link>
-          </Text>
+          { error ? <Text>{error}</Text> : (
+            <Text>
+              Sorry, something went wrong and we couldn't load your matches. Try refreshing in a couple minutes and if
+              you're still getting this error, contact <Link href="mailto:labs@codeday.org">labs@codeday.org</Link>
+            </Text>
+          )}
         </Content>
       </Page>
     )
@@ -148,7 +155,7 @@ export default function Home({ id, matches, record, debug, priorVotes }) {
           <Text fontSize="xl" bold>We recommend viewing this site on a device with a larger screen.</Text>
           <Text>There's a lot of information on this page, and it's hard to see it all on a phone.</Text>
         </Box>
-        <Explain record={record} />
+        <Explain record={record} debug={debug} />
         <Grid templateColumns={{ base: '1fr', md: '2fr 4fr' }}>
           <Box mr={4}>
             <Heading as="h3" fontSize="xl">Rank Your Favorite Projects</Heading>
